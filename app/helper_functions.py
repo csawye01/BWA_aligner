@@ -51,7 +51,7 @@ def create_img(seq1, seq2, ranges):
     # make thumbnail
     im.thumbnail(thumb)
 
-    file_name = './static/temp/seq_align_PIL.png'
+    file_name = 'app/static/temp/seq_align_PIL.png'
     # save image
     im.save(file_name)
 

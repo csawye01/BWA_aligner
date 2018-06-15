@@ -1,9 +1,18 @@
-from flask import redirect, request, url_for, flash, render_template
+from flask import redirect, url_for, flash, render_template, Flask
 from werkzeug.utils import secure_filename
 from . import main
 from .forms import UploadReads
-import os
 from flask.ext.bootstrap import Bootstrap
+import os
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio.Alphabet import IUPAC
+from Bio import SeqIO
+from Bio.Align.Applications import ClustalOmegaCommandline
+from .helper_functions import diff, SNP_ranges, fasta_split, create_img
+
+
+app = Flask(__name__, static_folder='static', template_folder='template')
 
 @main.route('/', methods=['GET', 'POST'])
 def uploadparts_BWA():
@@ -19,18 +28,54 @@ def uploadparts_BWA():
         form.R2_file.data.save('./static/temp/' + R2_filename)
 
         # use BWA aligner to index the GenBank file and align the paired reads
+        ref_fasta = './static/temp/' + GB_filename
         read_1 = './static/temp/' + R1_filename
         read_2 = './static/temp/' + R2_filename
-        cmd_index = "bwa index ./static/temp/" + GB_filename
-        cmd_align = "bwa mem ./static/temp/" + GB_filename + " " + read_1 + " " + read_2 + \
+        cmd_index = "bwa index " + ref_fasta
+        cmd_align = "bwa mem " + ref_fasta + " " + read_1 + " " + read_2 + \
                     " | samtools sort -O BAM -o ./static/temp/output.bam -"
         os.system(cmd_index)
         os.system(cmd_align)
 
         # create consensus sequence from bam file
-        cmd_bam2fasta = "samtools bam2fq ./static/temp/output.bam | seqtk seq - A - > ./static/temp/output.fa"
+        cdm_sortbam = "samtools sort ./static/temp/output.bam  -o output_sorted.bam"
+        cmd_bam2fasta = "samtools mpileup -uf " + ref_fasta + " ./static/temp/output_sorted.bam | bcftools call -c| vcfutils.pl vcf2fq > ./static/temp/cons.fq"
+        os.system(cdm_sortbam)
         os.system(cmd_bam2fasta)
 
+        SeqIO.convert("./static/temp/cons.fq", "fastq", "./static/temp/cons_fasta.fasta", "fasta")
+        ref_record = SeqIO.read(ref_fasta, "fasta")
+        RefSeq = ref_record.seq
+        plas_record = SeqIO.read('./static/temp/cons_fasta.fasta', "fasta")
+        AlignedSeq = plas_record.seq
+
+        records = (SeqRecord(Seq(seq, IUPAC.protein), id=str(index), name="Seq", description="Seq") for index, seq in
+                   enumerate([str(RefSeq), str(AlignedSeq)]))
+
+        with open("./static/temp/combined_seqs.fasta", 'w') as output_handle:
+            SeqIO.write(records, output_handle, "fasta")
+
+        clustalomega_cline = ClustalOmegaCommandline(infile="./static/temp/combined_seqs.fasta",
+                                                     outfile="./static/temp/aligned_seqs.fasta",
+                                                     verbose=True, auto=True, force=True)
+        clustalomega_cline()
+
+        fasta_sequences = SeqIO.parse(open("./static/temp/aligned_seqs.fasta"), 'fasta')
+
+        seq1, seq2 = fasta_split(fasta_sequences)
+
+        d = diff(seq1, seq2)
+        ranges = SNP_ranges(d)
+
+        img_file = create_img(seq1, seq2, ranges)
+
+        return redirect(url_for('Aligned_Seqs.html', image=img_file))
+
+    return render_template('index.html', form=UploadReads)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 
 

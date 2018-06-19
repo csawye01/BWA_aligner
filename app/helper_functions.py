@@ -31,8 +31,12 @@ def fasta_split(fasta_file):
     return seq1, seq2
 
 def create_img(seq1, seq2, ranges):
+    if len(seq1) >= len(seq2):
+        image_len = len(seq1)
+    else:
+        image_len = len(seq2)
     # size of image
-    canvas = (len(seq1), 600)
+    canvas = (image_len, 600)
 
     # scale ration
     scale = 6

@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 import os
 from app import create_app
 from flask_script import Manager, Shell
 
-
-app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+app = create_app(os.getenv('FlaskEnv') or 'default')
 
 manager = Manager(app)
 
@@ -12,6 +10,5 @@ def make_shell_context():
     return dict(app=app)
 manager.add_command("shell", Shell(make_context=make_shell_context))
 
-
-if __name__ == '__main__':
+if __name__ == '__app__':
     manager.run()

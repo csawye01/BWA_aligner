@@ -6,7 +6,9 @@
     <h1>Aligned Plasmids</h1>
 </div>
 <div>
-    <h2>Reference Sequence vs. Aligned sequence </h2>
+    <a href={{ url_for('static', filename= "temp/cons_fasta.fasta") }} >Fasta File</a>
+
+    <h3>Reference Sequence vs. Aligned sequence </h3>
     <img src="{{ url_for('static', filename='temp/seq_align_PIL.png') }}" />
 </div>
 {% endblock %}

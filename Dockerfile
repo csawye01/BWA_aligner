@@ -1,8 +1,15 @@
 FROM python:3
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8000
 
-COPY . /BWA_aligner
+WORKDIR /usr/src/app
 
-CMD ["python", "/BWA_aligner/project/views.py"]
+# Install dependencies
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+# Copy the rest of the application code
+COPY . /usr/src/app
+
+# Run the app
+CMD ["./run.py"]
